@@ -3,12 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>商品库存管理系统 (LeanCloud版)</title>
+    <title>商品库存管理系统 (LeanCloud版 - 修复批量上传)</title>
     
     <!-- 修复点：添加 https: 前缀，确保本地打开也能加载 -->
     <script src="https://cdn.jsdelivr.net/npm/leancloud-storage@4.15.0/dist/av-min.js"></script>
-    <!-- 如果上面这个加载失败，可以将上面那行删掉，换成下面这行备用源： -->
-    <!-- <script src="https://unpkg.com/leancloud-storage@4.15.0/dist/av-min.js"></script> -->
     
     <style>
         :root {
@@ -683,44 +681,81 @@
             renderPendingList();
         }
 
-        // --- 核心：保存到 LeanCloud ---
+        // --- 核心：保存到 LeanCloud (已修复 429 问题：改为排队串行上传) ---
         async function savePendingProducts() {
             if (typeof AV === 'undefined') return alert("SDK未加载，无法保存");
             if (pendingProducts.length === 0) return alert("没有可以保存的商品");
             const hasEmptyRequired = pendingProducts.some(p => !p.cost);
             if (hasEmptyRequired) return alert("请填写成本");
 
-            showLoading("正在上传图片并保存数据...");
+            // 记录成功保存的商品 tempId
+            let successIds = [];
+            const total = pendingProducts.length;
 
             try {
-                const promises = pendingProducts.map(async (p) => {
-                    const avFile = new AV.File(p.fileObject.name, p.fileObject);
-                    const savedFile = await avFile.save();
-
-                    const Product = AV.Object.extend('product');
-                    const product = new Product();
+                // 使用 for 循环进行串行操作，避免同时发送请求导致 429 Too Many Requests
+                for (let i = 0; i < total; i++) {
+                    const p = pendingProducts[i];
                     
-                    product.set('name', p.name);
-                    product.set('shortName', p.shortName);
-                    product.set('cost', parseFloat(p.cost));
-                    product.set('price', parseFloat(p.price) || 0);
-                    product.set('color', p.color);
-                    product.set('remarks', p.remarks);
-                    product.set('date', new Date()); 
-                    product.set('photo', savedFile);
+                    // 显示当前进度
+                    showLoading(`正在保存第 ${i + 1} / ${total} 个...`);
 
-                    return product.save();
-                });
+                    try {
+                        // 1. 先保存图片
+                        const avFile = new AV.File(p.fileObject.name, p.fileObject);
+                        const savedFile = await avFile.save();
 
-                await Promise.all(promises);
-                
-                alert("保存成功！");
-                closeModal('add-modal');
-                fetchData();
+                        // 2. 再保存数据
+                        const Product = AV.Object.extend('product');
+                        const product = new Product();
+                        
+                        product.set('name', p.name);
+                        product.set('shortName', p.shortName);
+                        product.set('cost', parseFloat(p.cost));
+                        product.set('price', parseFloat(p.price) || 0);
+                        product.set('color', p.color);
+                        product.set('remarks', p.remarks);
+                        product.set('date', new Date()); 
+                        product.set('photo', savedFile);
+
+                        await product.save();
+                        
+                        // 记录成功
+                        successIds.push(p.tempId);
+                        
+                    } catch (singleError) {
+                        console.error("单个保存失败:", singleError);
+                        // 如果遇到错误，可以选择 break 停止，或者继续尝试下一个。
+                        // 这里选择如果是严重错误(如 429)则停止，否则继续？
+                        // 为了简单起见，如果单个失败，我们不中断循环，但它不会被加入 successIds
+                        // 用户最后会看到剩下的列表。
+                        if (singleError.message && singleError.message.includes('429')) {
+                             alert(`上传过快导致服务器限制，已保存 ${successIds.length} 个。请稍后点击按钮继续保存剩余商品。`);
+                             break; // 停止，防止后续也全部失败
+                        }
+                    }
+                }
+
+                // 循环结束或中断后
+                if (successIds.length === total) {
+                    alert("全部保存成功！");
+                    closeModal('add-modal');
+                } else if (successIds.length > 0) {
+                    alert(`部分保存成功 (${successIds.length}/${total})。\n失败或未执行的保留在列表中，请稍后重试。`);
+                } else {
+                    alert("保存失败，请重试。");
+                }
 
             } catch (error) {
                 console.error(error);
-                alert("保存失败: " + error.message);
+                alert("保存流程出错: " + error.message);
+            } finally {
+                // 关键点：无论结果如何，把已经成功的从列表中移除
+                if (successIds.length > 0) {
+                    pendingProducts = pendingProducts.filter(p => !successIds.includes(p.tempId));
+                    renderPendingList(); // 重新渲染，只剩下没成功的
+                    fetchData(); // 刷新后台数据表格
+                }
                 hideLoading();
             }
         }
