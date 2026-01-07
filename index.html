@@ -361,7 +361,7 @@
                     <input type="file" id="edit-file-input" accept="image/*" style="display: none;">
                 </div>
                 <div style="flex: 1; display: grid; gap: 10px;">
-                    <div class="form-field"><label class="required">名称</label><input type="text" id="edit-name"></div>
+                    <div class="form-field"><label>名称</label><input type="text" id="edit-name"></div>
                     <div class="form-field"><label class="required">成本</label><input type="number" id="edit-cost"></div>
                 </div>
             </div>
@@ -652,7 +652,7 @@
                 div.innerHTML = `
                     <img src="${item.imagePreview}" style="width:80px; height:80px; object-fit:cover; border:1px solid #ccc;">
                     <div class="pending-inputs">
-                        <div class="form-field"><label class="required">名称</label><input type="text" value="${item.name}" oninput="updatePending('${item.tempId}', 'name', this.value)"></div>
+                        <div class="form-field"><label>名称</label><input type="text" value="${item.name}" oninput="updatePending('${item.tempId}', 'name', this.value)"></div>
                         <div class="form-field"><label>简称</label><input type="text" value="${item.shortName}" oninput="updatePending('${item.tempId}', 'shortName', this.value)"></div>
                         <div class="form-field"><label class="required">成本</label><input type="number" value="${item.cost}" oninput="updatePending('${item.tempId}', 'cost', this.value)"></div>
                         <div class="form-field"><label>售价</label><input type="number" value="${item.price}" oninput="updatePending('${item.tempId}', 'price', this.value)"></div>
@@ -687,8 +687,8 @@
         async function savePendingProducts() {
             if (typeof AV === 'undefined') return alert("SDK未加载，无法保存");
             if (pendingProducts.length === 0) return alert("没有可以保存的商品");
-            const hasEmptyRequired = pendingProducts.some(p => !p.name || !p.cost);
-            if (hasEmptyRequired) return alert("请填写名称和成本");
+            const hasEmptyRequired = pendingProducts.some(p => !p.cost);
+            if (hasEmptyRequired) return alert("请填写成本");
 
             showLoading("正在上传图片并保存数据...");
 
@@ -782,7 +782,7 @@
             const name = document.getElementById('edit-name').value;
             const cost = document.getElementById('edit-cost').value;
             
-            if(!name || !cost) return alert("名称和成本必填");
+            if(  !cost) return alert("成本必填");
 
             showLoading("正在更新...");
 
