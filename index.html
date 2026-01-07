@@ -285,8 +285,10 @@
                 <span>-</span>
                 <input type="number" id="filter-price-max" placeholder="最高价">
             </div>
-            <button class="btn btn-primary" onclick="renderTable()">本地过滤</button>
-            <button class="btn btn-outline" onclick="fetchData()">刷新云端数据</button>
+            <!-- 修改部分：查询和重置按钮 -->
+            <button class="btn btn-primary" onclick="renderTable()">查询</button>
+            <button class="btn btn-outline" onclick="resetFilters()">重置</button>
+            <button class="btn btn-outline" onclick="fetchData()" title="从服务器重新获取最新数据">刷新云端数据</button>
         </div>
 
         <div class="filter-group">
@@ -489,7 +491,7 @@
                         date: dateStr
                     };
                 });
-                renderTable();
+                renderTable(); // 获取数据后渲染（此时查询框为空，显示全部）
             } catch (error) {
                 console.error(error);
                 alert("获取数据失败: " + error.message);
@@ -535,30 +537,35 @@
             closeModal('col-settings-modal');
         }
 
-        // --- 表格渲染 ---
+        // --- 表格渲染 与 筛选逻辑 ---
         function renderTable() {
             const tbody = document.getElementById('product-table-body');
             tbody.innerHTML = '';
 
+            // 获取输入框的值
             const nameFilter = document.getElementById('filter-name').value.toLowerCase();
             const remarkFilter = document.getElementById('filter-remark').value.toLowerCase();
             const minPrice = parseFloat(document.getElementById('filter-price-min').value);
             const maxPrice = parseFloat(document.getElementById('filter-price-max').value);
 
+            // 过滤逻辑
             const filtered = products.filter(p => {
                 const matchName = p.name.toLowerCase().includes(nameFilter) || p.shortName.toLowerCase().includes(nameFilter);
                 const matchRemark = p.remarks.toLowerCase().includes(remarkFilter);
                 let matchPrice = true;
                 const price = parseFloat(p.price);
+                
+                // 价格范围检查
                 if (!isNaN(minPrice)) matchPrice = matchPrice && (price >= minPrice);
                 if (!isNaN(maxPrice)) matchPrice = matchPrice && (price <= maxPrice);
+                
                 return matchName && matchRemark && matchPrice;
             });
 
             document.getElementById('total-count').innerText = filtered.length;
 
             if (filtered.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; padding: 30px; color:#000;">暂无数据</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; padding: 30px; color:#000;">暂无数据 / 无匹配项</td></tr>';
                 return;
             }
 
@@ -582,6 +589,18 @@
                 tbody.appendChild(tr);
             });
             document.getElementById('check-all').checked = false;
+        }
+
+        // --- 新增：重置筛选 ---
+        function resetFilters() {
+            // 清空输入框
+            document.getElementById('filter-name').value = '';
+            document.getElementById('filter-remark').value = '';
+            document.getElementById('filter-price-min').value = '';
+            document.getElementById('filter-price-max').value = '';
+            
+            // 重新渲染表格（因为值都空了，所以会显示全部）
+            renderTable();
         }
 
         // --- 图片选择与预览逻辑 ---
