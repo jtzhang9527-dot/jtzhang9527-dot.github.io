@@ -172,7 +172,16 @@
         }
         
         .col-remark .truncate { max-width: 250px; }
-        .col-name .truncate {  width: 100%;max-width: 200px; font-weight: bold; }
+        /* .col-name .truncate {  width: 100%;max-width: 200px; font-weight: bold; } */
+        /* 修复：给列本身设置宽度限制，防止被表格拉伸 */
+        .col-name {
+            width: 220px;       /* 设置一个合适的固定宽度 */
+            max-width: 220px;   /* 强制最大宽度，多余空间不分配给它 */
+        }
+        .col-name .truncate {
+            width: 100%;        /* 文字容器填满单元格 */
+            font-weight: bold;
+        }
 
         /* --- 模态框 --- */
         .modal {
@@ -872,5 +881,6 @@
     </script>
 </body>
 </html>
+
 
 
