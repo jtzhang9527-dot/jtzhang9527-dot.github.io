@@ -173,14 +173,17 @@
         
         .col-remark .truncate { max-width: 250px; }
         /* .col-name .truncate {  width: 100%;max-width: 200px; font-weight: bold; } */
-        /* 修复：给列本身设置宽度限制，防止被表格拉伸 */
-        .col-name {
-            width: 220px;       /* 设置一个合适的固定宽度 */
-            max-width: 220px;   /* 强制最大宽度，多余空间不分配给它 */
+        /* 1. 限制列的最大范围，防止名字太长把表格撑爆，但不是固定宽度 */
+        .col-name { 
+            max-width: 300px;  /* 给一个较大的上限，在这个范围内自动伸缩 */
+            min-width: 150px;  /* 保证最小宽度 */
         }
+        
+        /* 2. 让文字容器填满当前的列宽 */
         .col-name .truncate {
-            width: 100%;        /* 文字容器填满单元格 */
-            font-weight: bold;
+            max-width: 100%;   /* 关键：改为百分比，自动填满当前格子 */
+            width: 100%;       
+            font-weight: bold; 
         }
 
         /* --- 模态框 --- */
@@ -881,6 +884,7 @@
     </script>
 </body>
 </html>
+
 
 
 
